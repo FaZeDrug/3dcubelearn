@@ -1,15 +1,29 @@
 
 # 3D Cube Learn — Architecture
 
-**Status:** Proposed architecture; application code has not been scaffolded
+**Status:** Current through M0; later milestone boundaries remain proposed
 
-**Last updated:** 2026-09-29
+**Last updated:** 2026-09-30
 
 ## 1. Architectural goal
 
 Keep real-time interaction responsive and private in the browser while isolating cube rules from rendering. Add server authority only when timed ranked attempts require identity, validation, and persistence.
 
 The architecture should be understandable as a pipeline rather than a collection of framework features.
+
+The implemented M0 path is intentionally small:
+
+```mermaid
+flowchart LR
+    A[Next.js root route] --> B[CubeStage client component]
+    B --> C[React Three Fiber Canvas]
+    C --> D[Camera, lights, and OrbitControls]
+    C --> E[RubiksCube]
+    F[Pure cubie position generator] --> E
+    E --> G[27 Three.js cubie meshes]
+```
+
+Everything after this rendering path is introduced only when its milestone becomes active.
 
 ```mermaid
 flowchart LR
@@ -42,7 +56,7 @@ flowchart LR
 
 ### Rendering
 
-The first milestone renders a cube without camera or tracking dependencies. The 3D scene should be replaceable and testable through clear component boundaries.
+M0 renders a cube without camera or tracking dependencies. `app/page.tsx` mounts `CubeStage`, which owns the React Three Fiber canvas, camera, lights, and orbit controls. `RubiksCube` owns the rendered cube composition. A pure TypeScript helper generates the 27 unique cubie positions and is tested without React or WebGL.
 
 ### Camera
 
@@ -78,13 +92,28 @@ The backend is intentionally deferred until the interaction demo works, but the 
 
 Camera frames and raw landmarks do not cross the client/server boundary.
 
-## 5. Proposed project structure
+## 5. Current and planned project structure
 
-This structure is a guide and should be created incrementally rather than all at once:
+The repository currently contains only the boundaries required through M0:
 
 ```text
 app/
-  page.tsx                  # current functional stage
+  layout.tsx                # document shell and metadata
+  page.tsx                  # root route; mounts the current stage
+  globals.css               # full-window stage and minimal HUD styles
+components/
+  cube-stage.tsx            # client canvas, camera, lights, and orbit controls
+  rubiks-cube.tsx           # cubie meshes and solved face colors
+lib/
+  cube/
+    cubie-positions.ts      # pure 3×3 coordinate generation
+    cubie-positions.test.ts # focused non-visual unit test
+```
+
+Later boundaries remain a guide and should be created incrementally:
+
+```text
+app/
   api/                      # later server endpoints
 components/
   experience/              # durable UI around the stage
@@ -98,12 +127,6 @@ features/
 lib/
   cube-core/                # pure state and legal moves
   server/                   # later auth and persistence helpers
-docs/
-  PRD.md
-  BUILD_PLAN.md
-  ARCHITECTURE.md
-  DECISIONS.md
-  BUILD_LOG.md
 ```
 
 Only directories required by the active milestone should exist.
@@ -120,7 +143,9 @@ Only directories required by the active milestone should exist.
 
 ## 7. Verification strategy
 
-- Pure cube and gesture logic: deterministic unit tests
+- Current cubie-position logic: deterministic Vitest unit test
+- Current 3D stage: production build plus a real-browser orbit, zoom, resize, and console smoke test
+- Future pure cube and gesture logic: deterministic unit tests
 - React UI states: focused component tests
 - Camera/tracking adapters: fixtures plus manual testing with a real webcam
 - Primary user journeys: browser automation when stable

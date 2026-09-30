@@ -2,9 +2,9 @@
 
 **Status:** Active
 
-**Current milestone:** M0 — Functional 3D lab
+**Current milestone:** M1 — Camera lifecycle
 
-**Last updated:** 2026-09-29
+**Last updated:** 2026-09-30
 
 ## 1. What a milestone means
 
@@ -31,8 +31,8 @@ The project does not need to reach finish line 6 before finish lines 1–3 count
 
 | Milestone | Observable outcome | PRD traceability | Status |
 |---|---|---|---|
-| M0 — Functional 3D lab | A local web app renders a recognizable, inspectable 3×3 cube in a utilitarian full-screen stage. | Foundation; no product FR completed | **Next** |
-| M1 — Camera lifecycle | The user can start a mirrored webcam view, understand permission state, and stop the camera. | FR-01, FR-02, FR-04, FR-11 | Planned |
+| M0 — Functional 3D lab | A local web app renders a recognizable, inspectable 3×3 cube in a utilitarian full-screen stage. | Foundation; no product FR completed | **Complete** |
+| M1 — Camera lifecycle | The user can start a mirrored webcam view, understand permission state, and stop the camera. | FR-01, FR-02, FR-04, FR-11 | **Next** |
 | M2 — Two-hand tracking | The app displays reliable debug landmarks and zero/one/two-hand status. | FR-03, FR-04, part of FR-06 | Planned |
 | M3 — Cube in my hands | A solved cube appears stably between two hands and safely handles tracking loss. | FR-05, FR-06 | Planned |
 | M4 — One deliberate turn | A taught pinch-and-drag turns one selected layer with preview, cancel, and 90° snap. | FR-07, FR-08, FR-09, FR-12, FR-13 | Planned |
@@ -44,7 +44,9 @@ The project does not need to reach finish line 6 before finish lines 1–3 count
 
 FR-14, preference persistence, should be added when a preference first becomes stable and valuable rather than receiving its own milestone.
 
-## 4. Active milestone: M0 — Functional 3D lab
+## 4. Completed milestone: M0 — Functional 3D lab
+
+**Completed:** 2026-09-30
 
 ### Goal
 
@@ -98,7 +100,60 @@ After M0, the project owner should be able to explain:
 - Which component owns the canvas and which code creates the cube
 - How to start the application and verify a production build
 
-## 5. Milestone operating loop
+### Completion evidence
+
+- Locked dependency installation completed with `npm ci`; `npm ls --depth=0` confirmed the dependency tree.
+- The development server started with `npm run dev`.
+- Chrome rendered the solved cube with no application console errors.
+- Dragging changed the camera orbit, scrolling changed camera distance, and resizing preserved a usable scene.
+- Lint, type checking, the focused unit test, and the production build passed.
+- `docs/BUILD_LOG.md` contains the detailed verification record and learning handoff.
+
+## 5. Active milestone: M1 — Camera lifecycle
+
+### Goal
+
+Add the first privacy-respecting webcam lifecycle without hand tracking. The user must understand why camera access is needed, choose when to request it, see a mirrored live preview when permission succeeds, understand failure states, and be able to stop every active video track.
+
+### Deliverables
+
+- A clear explanation before camera permission is requested
+- An explicit **Start camera** action
+- A browser camera request for video only, never audio
+- A mirrored live video preview
+- Human-readable idle, requesting, active, denied, unavailable, and error states
+- A persistent **Camera active** indicator while a stream is live
+- A **Stop camera** action that stops every media track
+- Cleanup that stops tracks when the camera experience unmounts
+- Focused tests for camera-state transitions or stream cleanup
+- Updated run, architecture, decision, and build-log documentation
+
+### Acceptance criteria
+
+M1 is complete only when:
+
+1. Loading the page does not request camera permission automatically.
+2. The page explains the camera purpose before the user selects **Start camera**.
+3. Starting the camera requests video without requesting microphone access.
+4. Granting permission shows a mirrored live preview and a visible **Camera active** state.
+5. Denied permission, missing hardware, and unexpected camera errors each produce an actionable message.
+6. Selecting **Stop camera** stops every stream track and returns the interface to an inactive state.
+7. Leaving or unmounting the experience also stops every stream track.
+8. The completed M0 cube stage remains available and the project validation commands continue to pass.
+9. A real-browser camera smoke test and its limitations are recorded in the build log.
+
+### Explicit non-goals
+
+M1 does not include:
+
+- Hand landmark detection
+- Cube placement over the video
+- Gesture recognition or cube turns
+- 3D modeled hands
+- Authentication, persistence, timers, leaderboards, or replay
+- Marketing-page design
+
+## 6. Milestone operating loop
 
 For each milestone:
 
@@ -112,7 +167,7 @@ For each milestone:
 8. Complete the learning handoff.
 9. Mark the milestone complete and activate exactly one next milestone.
 
-## 6. Parking lot
+## 7. Parking lot
 
 Ideas recorded here are intentionally not active work:
 

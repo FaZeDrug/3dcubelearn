@@ -1,0 +1,48 @@
+{
+  "name": "3dcubelearn",
+  "version": "1.0.0",
+  "description": "Learn how to solve a Rubik's-style cube without owning one.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FaZeDrug/3dcubelearn.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/FaZeDrug/3dcubelearn/issues"
+  },
+  "homepage": "https://github.com/FaZeDrug/3dcubelearn#readme",
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
+    "next": "^16.3.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.7",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.2"
+  },
+  "private": true
+}

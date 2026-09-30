@@ -36,7 +36,7 @@ Each record includes status, context, decision, rationale, consequences, and dat
 
 ## D-003 — Use a modular Next.js TypeScript application
 
-**Status:** Provisional
+**Status:** Accepted
 
 **Decision:** Start with one Next.js TypeScript repository that can later contain UI and server endpoints rather than separate frontend and backend services.
 
@@ -44,21 +44,21 @@ Each record includes status, context, decision, rationale, consequences, and dat
 
 **Consequences:** Browser-only libraries must be isolated to client components. Backend provider configuration is deferred until its milestone.
 
-**Validation:** M0 must confirm that the selected application and 3D stack build cleanly together.
+**Validation:** M0 confirmed a clean locked install, development server, passing lint and type checks, a focused unit test, a successful production build, and a working browser-rendered 3D stage.
 
 **Date:** 2026-09-29
 
 ## D-004 — Use Three.js through React Three Fiber
 
-**Status:** Provisional
+**Status:** Accepted
 
-**Decision:** Use Three.js as the 3D engine and React Three Fiber as its React renderer.
+**Decision:** Use Three.js as the 3D engine and React Three Fiber as its React renderer. Use `OrbitControls` from `@react-three/drei` for M0 inspection controls instead of implementing custom camera input.
 
 **Rationale:** Three.js provides the required scene, camera, geometry, material, lighting, model-loading, and animation capabilities. React Three Fiber integrates those primitives with React and manages the canvas/render loop while preserving access to Three.js objects.
 
 **Consequences:** The team must still learn core Three.js concepts. High-frequency tracking updates must not flow through ordinary React state on every frame.
 
-**Validation:** M0 must demonstrate a responsive scene, correct cleanup, successful production build, and understandable component ownership.
+**Validation:** M0 demonstrated a responsive scene, successful production build, clear canvas/rendering ownership, and working orbit, zoom, and resize behavior in Chrome.
 
 **Date:** 2026-09-29
 
@@ -97,3 +97,15 @@ Each record includes status, context, decision, rationale, consequences, and dat
 **Consequences:** The first avatar replay represents the user's move sequence and pace, not exact biomechanics.
 
 **Date:** 2026-09-29
+
+## D-008 — Use Vitest for pure TypeScript tests
+
+**Status:** Accepted
+
+**Decision:** Use Vitest for deterministic tests of framework-independent TypeScript modules, beginning with cubie-position generation.
+
+**Rationale:** Vitest provides a small, fast test path for logic that should not require React, Three.js, a browser, or a running Next.js server.
+
+**Consequences:** Rendering behavior still requires an explicit browser smoke test. As the cube engine grows, its legal moves and state transitions should remain testable through the same non-visual test boundary.
+
+**Date:** 2026-09-30
