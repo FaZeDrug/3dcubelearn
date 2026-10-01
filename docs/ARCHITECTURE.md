@@ -1,7 +1,7 @@
 
 # 3D Cube Learn — Architecture
 
-**Status:** Current through M1; later milestone boundaries remain proposed
+**Status:** Current through completed M2; M3 boundaries remain proposed
 
 **Last updated:** 2026-09-30
 
@@ -11,7 +11,7 @@ Keep real-time interaction responsive and private in the browser while isolating
 
 The architecture should be understandable as a pipeline rather than a collection of framework features.
 
-The implemented path through M1 is intentionally small:
+The implemented path through M2 is intentionally small:
 
 ```mermaid
 flowchart LR
@@ -25,7 +25,14 @@ flowchart LR
     H --> I[Browser mediaDevices API]
     I -->|live MediaStream| G
     B -->|camera active| J[Mirrored CameraPreview]
+    J --> L[Video element]
+    L --> M[useHandTracking frame loop]
+    M --> N[MediaPipe adapter]
+    N --> O[Application hand observations]
+    O --> P[Imperative landmark canvas]
+    O --> Q[Zero / one / two-hand UI state]
     G -->|stop or unmount| K[Stop every media track]
+    M -->|stop or unmount| R[Cancel frame loop and close task]
 ```
 
 Everything after this rendering path is introduced only when its milestone becomes active.
@@ -71,7 +78,11 @@ The stream reference exists in React state only when it starts or stops so the p
 
 ### Tracking
 
-The tracking adapter will translate MediaPipe output into an application-owned landmark format. This prevents the rest of the app from depending directly on a specific vision-library response shape.
+M2 adds MediaPipe Hand Landmarker behind `hand-tracker.ts`. The adapter dynamically imports the pinned `@mediapipe/tasks-vision@1.0.1` browser package only after the camera is active, loads a version-matched WebAssembly runtime plus Google's float16 hand model, requests at most two hands in VIDEO mode, and translates the result into application-owned landmark, handedness, and confidence types. Camera frames and raw landmarks do not enter an application network request or persistence layer.
+
+`use-hand-tracking.ts` owns task loading, a request-animation-frame loop capped at 30 inference attempts per second, hand-count transitions, retryable failures, cancellation, and task disposal. `detectForVideo()` is synchronous, so the loop cannot start a second inference while one is still running. The current first implementation runs inference on the main browser thread; the project owner's real-webcam test confirmed that the resulting zero-, one-, and two-hand experience worked correctly on the baseline MacBook.
+
+Landmarks are drawn imperatively onto a canvas instead of being stored frame by frame in React state. React updates only when model status, error state, or the zero/one/two-hand count changes. The mapping helper mirrors x coordinates and accounts for `object-fit: cover` cropping so canvas points share the displayed video's coordinate system.
 
 ### Stabilization
 
@@ -101,7 +112,7 @@ Camera frames and raw landmarks do not cross the client/server boundary.
 
 ## 5. Current and planned project structure
 
-The repository currently contains only the boundaries required through M1:
+The repository currently contains only the boundaries required through M2:
 
 ```text
 app/
@@ -110,7 +121,7 @@ app/
   globals.css               # full-window stage, preview, status, and controls
 components/
   camera-experience.tsx     # camera UI states and stage/preview switching
-  camera-preview.tsx        # MediaStream-to-video attachment and mirrored view
+  camera-preview.tsx        # MediaStream video plus aligned landmark canvas
   cube-stage.tsx            # client canvas, camera, lights, and orbit controls
   rubiks-cube.tsx           # cubie meshes and solved face colors
 features/
@@ -118,6 +129,13 @@ features/
     camera-service.ts       # media request, cleanup, and browser-error mapping
     camera-service.test.ts  # video-only, all-track cleanup, and failure tests
     use-camera.ts           # React camera lifecycle state machine
+  tracking/
+    tracking-types.ts       # application-owned observation and lifecycle types
+    hand-tracker.ts         # MediaPipe loading, inference, translation, disposal
+    use-hand-tracking.ts    # model and frame-loop lifecycle
+    draw-hand-landmarks.ts  # imperative canvas overlay
+    tracking-utils.ts       # mirror/cover math, hand counts, status copy
+    *.test.ts               # adapter, coordinate, and status tests
 lib/
   cube/
     cubie-positions.ts      # pure 3×3 coordinate generation
@@ -146,7 +164,8 @@ Only directories required by the active milestone should exist.
 
 - React owns menus, camera permission status, errors, active modes, the stream reference used to mount the preview, and other human-scale UI state.
 - The camera service owns browser permission requests, browser-error translation, and the rule that every media track must be stopped.
-- The tracking loop owns per-frame landmark observations.
+- The tracking loop owns per-frame landmark observations and draws them directly to the overlay canvas.
+- React owns only tracking lifecycle, failures, whether hands have been seen, and zero/one/two-hand count changes.
 - The stabilizer owns filtered transforms and confidence history.
 - The cube engine owns the authoritative cube configuration.
 - Three.js owns only scene objects and transitional visual animation.
@@ -160,7 +179,7 @@ Only directories required by the active milestone should exist.
 - Current camera lifecycle: deterministic service tests plus a real-browser permission, live-preview, stop, and unmount smoke test
 - Future pure cube and gesture logic: deterministic unit tests
 - React UI states: focused component tests
-- Camera/tracking adapters: fixtures plus manual testing with a real webcam
+- Current tracking adapter: deterministic MediaPipe-result fixtures, coordinate/status tests, and a project-owner real-webcam zero/one/two-hand smoke test
 - Primary user journeys: browser automation when stable
 - Visual alignment and interaction quality: explicit browser smoke tests on a baseline laptop
 - Server authorization and validation: integration tests and database-policy tests when backend work begins

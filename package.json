@@ -27,6 +27,7 @@
   },
   "homepage": "https://github.com/FaZeDrug/3dcubelearn#readme",
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "next": "^16.3.7",

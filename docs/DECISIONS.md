@@ -123,3 +123,17 @@ Each record includes status, context, decision, rationale, consequences, and dat
 **Validation:** M1 verified that permission is not requested on load, Chrome receives a camera-only request, a mirrored preview becomes playback-ready, both explicit stop and component unmount clear Chrome's recording indicator, and automated tests cover all-track cleanup and browser-error mapping. A quality follow-up replaced Chrome's 640×480 default with ideal HD constraints and measured a negotiated 1920×1080 stream on the baseline MacBook camera.
 
 **Date:** 2026-09-30
+
+## D-010 — Use a pinned MediaPipe adapter for browser hand landmarks
+
+**Status:** Accepted
+
+**Decision:** Use `@mediapipe/tasks-vision@1.0.1` and the MediaPipe Hand Landmarker float16 model for M2. Load the library dynamically only after camera activation, use VIDEO mode with a two-hand limit and GPU delegate, translate results into application-owned types, draw landmarks imperatively, cap inference attempts at 30 per second, and close the task when camera tracking stops. Load the version-matched WebAssembly runtime from jsDelivr and the versioned model from Google's MediaPipe model storage.
+
+**Rationale:** MediaPipe provides the required 21 normalized landmarks, handedness, and confidence without training a custom model. Pinning the package and runtime together avoids silent API/runtime drift. An adapter prevents later cube placement and gestures from depending on MediaPipe's response objects, while imperative drawing keeps high-frequency landmark frames out of React state.
+
+**Consequences:** The first tracking run needs network access to download the WebAssembly runtime and model, although browser caching should speed later runs. Inference currently runs synchronously on the main browser thread, so the baseline webcam test must measure whether it remains responsive enough before M2 is marked complete. A worker remains a later optimization only if measurement demonstrates a need. Camera frames and raw landmarks remain on-device; MediaPipe's official privacy notice says the API may send Google performance and utilization metrics, which the M2 interface discloses.
+
+**Validation:** Lint, type checking, 20 tests, dependency inspection, and the production build pass. The project owner tested the experience with a real webcam on the baseline MacBook and confirmed successful zero-, one-, and two-hand detection with the landmark overlay.
+
+**Date:** 2026-09-30

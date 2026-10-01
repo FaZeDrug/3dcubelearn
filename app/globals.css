@@ -96,14 +96,30 @@ canvas {
   background: #0c0d10;
 }
 
-.camera-preview__video {
-  display: block;
+.camera-preview__frame {
+  position: relative;
   width: min(64rem, 80vw, 135vh);
-  height: auto;
   aspect-ratio: 16 / 9;
+  overflow: hidden;
   border-radius: 0.75rem;
+}
+
+.camera-preview__video,
+.camera-preview__landmarks {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.camera-preview__video {
   object-fit: cover;
   transform: scaleX(-1);
+}
+
+.camera-preview__landmarks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .camera-active-indicator {
@@ -196,12 +212,18 @@ canvas {
   background: #f5b942;
 }
 
-.camera-status__dot--active {
+.camera-status__dot--active,
+.camera-status__dot--ready {
   background: #5ee38a;
+}
+
+.camera-status__dot--loading {
+  background: #f5b942;
 }
 
 .camera-status__dot--denied,
 .camera-status__dot--unavailable,
+.camera-status__dot--unsupported,
 .camera-status__dot--error {
   background: #ff7777;
 }
@@ -257,6 +279,26 @@ canvas {
 
 .camera-button--stop:hover:not(:disabled) {
   background: #ffeaea;
+}
+
+.camera-panel__actions {
+  display: grid;
+  gap: 0.625rem;
+  margin-top: 0.875rem;
+}
+
+.camera-panel__actions .camera-button {
+  margin-top: 0;
+}
+
+.camera-button--secondary {
+  border: 1px solid rgb(255 255 255 / 18%);
+  background: rgb(255 255 255 / 8%);
+  color: #f4f5f7;
+}
+
+.camera-button--secondary:hover:not(:disabled) {
+  background: rgb(255 255 255 / 13%);
 }
 
 @media (max-width: 40rem) {

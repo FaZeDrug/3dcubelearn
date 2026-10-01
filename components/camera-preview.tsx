@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, type RefObject } from "react";
 
 type CameraPreviewProps = {
+  canvasRef: RefObject<HTMLCanvasElement | null>;
   stream: MediaStream;
+  videoRef: RefObject<HTMLVideoElement | null>;
 };
 
-export function CameraPreview({ stream }: CameraPreviewProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
+export function CameraPreview({
+  canvasRef,
+  stream,
+  videoRef,
+}: CameraPreviewProps) {
   useEffect(() => {
     const video = videoRef.current;
 
@@ -23,18 +27,25 @@ export function CameraPreview({ stream }: CameraPreviewProps) {
         video.srcObject = null;
       }
     };
-  }, [stream]);
+  }, [stream, videoRef]);
 
   return (
     <div className="camera-preview">
-      <video
-        ref={videoRef}
-        aria-label="Mirrored live camera preview"
-        autoPlay
-        className="camera-preview__video"
-        muted
-        playsInline
-      />
+      <div className="camera-preview__frame">
+        <video
+          ref={videoRef}
+          aria-label="Mirrored live camera preview"
+          autoPlay
+          className="camera-preview__video"
+          muted
+          playsInline
+        />
+        <canvas
+          ref={canvasRef}
+          aria-hidden="true"
+          className="camera-preview__landmarks"
+        />
+      </div>
     </div>
   );
 }

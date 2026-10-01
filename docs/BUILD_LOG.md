@@ -6,11 +6,11 @@ This is the shared status and learning record. It should describe what actually 
 
 **Date:** 2026-09-30
 
-**Active milestone:** M2 — Two-hand tracking
+**Active milestone:** M3 — Cube in my hands
 
-**Application status:** M0 and M1 complete; M2 not started
+**Application status:** M0, M1, and M2 complete; M3 not started
 
-**Current observable demo:** The root route displays the inspectable M0 cube and an M1 camera panel. The page explains camera use before permission, starts a video-only mirrored preview on user request, reports lifecycle state, and stops the camera on request or unmount.
+**Current observable demo:** The root route displays the inspectable M0 cube and waits for an explicit camera start. Once active, it loads MediaPipe locally in the browser, draws mirrored landmark dots and connections over up to two hands, reports model loading and zero/one/two-hand states, and stops both tracking and camera resources on request or unmount.
 
 ## Completed
 
@@ -35,16 +35,23 @@ This is the shared status and learning record. It should describe what actually 
 - Added focused tests for video-only constraints, all-track cleanup, and browser-error mapping.
 - Preserved the M0 cube stage whenever the camera is inactive.
 - Verified the real camera start, playback, stop, and unmount journeys in Chrome and completed every M1 acceptance criterion.
+- Added a pinned MediaPipe Hand Landmarker adapter that exposes application-owned landmarks, handedness, and confidence for up to two hands.
+- Added loading, ready, unsupported, inference-error, zero-hand, one-hand, two-hand, and lost-tracking interface states.
+- Added a maximum-30-Hz, one-inference-at-a-time browser frame loop with cancellation and MediaPipe task disposal.
+- Added a mirrored canvas overlay whose pure coordinate mapper accounts for the preview's `object-fit: cover` crop.
+- Kept per-frame landmarks out of React state; React updates only when tracking status or hand count changes.
+- Added deterministic tests for MediaPipe-result translation, hand-count states, mirror/crop coordinate mapping, and lost-tracking copy.
+- Passed the M2 automated gates and the project owner's physical-hand browser smoke test; every M2 acceptance criterion is complete.
 
 ## Next action
 
-Review the completed M1 implementation and learning handoff, then begin M2 exactly as specified in `docs/BUILD_PLAN.md`:
+Begin M3 exactly as specified in `docs/BUILD_PLAN.md`:
 
-- Select and document the browser-side hand-landmark dependency.
-- Add tracking loading and failure states.
-- Draw debug landmarks aligned with the mirrored preview.
-- Report zero, one, or two detected hands.
-- Do not place or turn the cube yet.
+- Derive a pure, testable cube transform from two application-owned hand observations.
+- Composite the existing solved cube over the mirrored camera preview.
+- Anchor it near the palm midpoint and constrain scale from the distance between hands.
+- Add measured smoothing and safe freeze/fade behavior for tracking loss.
+- Do not add pinch recognition, layer turns, 3D modeled hands, or backend work.
 
 ## Current run instructions
 
@@ -55,7 +62,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`. The camera remains off until **Start camera** is selected. Grant camera permission to see the mirrored preview; select **Stop camera** when finished.
+Open `http://localhost:3000`. The camera remains off until **Start camera** is selected. Grant camera permission, wait for the MediaPipe model to load, and test zero, one, and two hands. Select **Stop camera** when finished.
 
 Run the validation gates with:
 
@@ -73,7 +80,7 @@ npm run build
 - `npm run dev` — passed; Next.js served the root route locally.
 - `npm run lint` — passed with no lint errors.
 - `npm run typecheck` — passed with no TypeScript errors.
-- `npm test` — passed: two test files and twelve tests.
+- `npm test` — passed: four test files and twenty tests.
 - `npm run build` — passed; `/` and `/_not-found` were statically generated.
 - Next.js still warns that it ignored `/Users/natasha/package-lock.json` because that separate home-directory lockfile is outside this repository. The repository's own lockfile remains present, and the production build completes successfully.
 - Chrome desktop smoke test — passed in an extension-free Incognito window:
@@ -104,16 +111,22 @@ npm run build
   - Chrome negotiated and played an actual 1920×1080 stream with `readyState` 4 on the baseline MacBook camera.
   - The computed mirror transform remained correct, **Stop camera** returned the app to idle, and the preview element was removed.
   - Four stale duplicate files inside the ignored `.next/types` build cache were removed after they caused duplicate TypeScript declarations; they were generated artifacts, not application source.
+- M2 automated verification — passed:
+  - `@mediapipe/tasks-vision@1.0.1` is installed as the documented top-level dependency.
+  - Pure tests verify MediaPipe-result translation, a two-hand cap, confidence handling, mirrored coordinates, `object-fit: cover` cropping, hand-count clamping, lost tracking, and loading/failure status copy.
+  - Lint and type checking pass with the tracking hook, canvas overlay, and dynamically loaded browser dependency.
+  - The production build statically generated `/` and `/_not-found` successfully.
+  - No project-local Mint or other production assets were added; the version-pinned MediaPipe WASM runtime and model are deliberate runtime downloads.
+- M2 real-webcam smoke test — passed by the project owner on the baseline MacBook. The owner reported that the experience was responsive and successfully detected zero, one, and two hands with the landmark overlay. This supplies the physical-hand evidence required to close M2. Mobile QA remains outside the milestone.
 
 ## Known risks and unknowns
 
-- MediaPipe performance has not been measured on a baseline laptop.
 - Mapping webcam landmarks into a convincing cube pose has not been proven.
 - The exact gesture for distinguishing whole-cube rotation from a face turn is unresolved.
 - The final choice of hand visualization is unresolved.
 - Backend providers are proposed but not configured.
 - The current cube is a visual solved model; it has no authoritative move state or face-turn mechanics yet.
-- The camera has no hand tracking; that begins in M2.
+- The M2 main-thread inference loop follows MediaPipe's synchronous web API; move it to a worker only if future measurement shows a real responsiveness problem.
 - Current Three.js dependencies emit two non-blocking development deprecation warnings described above.
 
 ## M0 learning handoff
@@ -213,6 +226,56 @@ In `components/camera-experience.tsx`, change the idle `detail` text from “The
 **Changed:** Centered the live video in a responsive 16:9 frame capped at 64rem while preserving the plain stage background around it. Camera capture, mirroring, and stream quality were not changed.
 
 **Verification:** Lint, type checking, all 12 tests, and the production build passed. In Chrome at a 1512×702 viewport, the live video rendered centered at approximately 948×533 with visible background on every side.
+
+## M2 learning handoff
+
+### What changed
+
+Starting the camera now starts a second, separately owned lifecycle for hand tracking. The interface loads an on-device MediaPipe model, draws landmark skeletons over as many as two hands, reports zero, one, two, and lost-hand states, and offers a retry if loading or inference fails. Stopping the camera cancels the animation loop, clears the overlay, closes the MediaPipe task, and then stops the camera tracks through the existing M1 lifecycle.
+
+### Why this implementation
+
+M2 needs to prove perception without mixing in cube placement or gestures. MediaPipe is isolated behind an adapter so later code receives project-owned hand observations instead of third-party objects. Landmark frames are drawn directly to canvas because sending 30 observations per second through React state would cause unnecessary component rendering; React only receives slow-changing status and hand-count values.
+
+The main-thread inference loop is intentionally the smallest implementation that can be measured. MediaPipe's web `detectForVideo()` call is synchronous, so each animation callback finishes before another inference can begin. The loop also caps attempts at 30 per second and drops duplicate video frames. A worker should be added only if the baseline smoke test shows a responsiveness problem.
+
+### Important files
+
+- `features/tracking/hand-tracker.ts` — dynamically loads MediaPipe, configures the two-hand model, translates results, and owns task disposal.
+- `features/tracking/tracking-types.ts` — defines the internal landmark, handedness, confidence, frame, hand-count, and lifecycle contracts.
+- `features/tracking/use-hand-tracking.ts` — owns model loading, the inference loop, hand-count transitions, retry, cancellation, and cleanup.
+- `features/tracking/draw-hand-landmarks.ts` — draws landmark connections and points directly onto the overlay canvas.
+- `features/tracking/tracking-utils.ts` — owns zero/one/two-hand copy and the mirror-plus-cover coordinate math.
+- `features/tracking/*.test.ts` — verifies application-owned mapping, counts, statuses, and coordinate behavior without a webcam.
+- `components/camera-preview.tsx` — keeps the video and transparent landmark canvas in one identically sized frame.
+- `components/camera-experience.tsx` — connects the existing camera lifecycle to tracking status, recovery controls, and user-facing privacy text.
+- `app/globals.css` — stacks the transparent canvas over the contained camera preview and styles tracking states.
+
+### Main data flow
+
+The user selects **Start camera** → M1 returns a live `MediaStream` → `CameraPreview` attaches it to the video → `useHandTracking` dynamically loads the MediaPipe task → each new video frame is passed to the adapter → the adapter returns at most two application-owned hand observations → landmarks are mirror-mapped and drawn to canvas → React updates only if the hand count or lifecycle state changes.
+
+On **Stop camera** or unmount, the tracking effect cancels its pending animation frame, closes the MediaPipe task, and clears the canvas. The M1 camera hook then stops every media track.
+
+### Exact run and verification commands
+
+```bash
+npm run dev
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+The automated gates pass with four test files and twenty tests. The project owner also confirmed successful zero-, one-, and two-hand detection with the landmark overlay on the baseline MacBook.
+
+### Known limitations and next milestone
+
+The loop currently runs MediaPipe synchronously on the main thread and has not received a formal performance profile or mobile test. M2 deliberately does not smooth landmarks for cube placement, place a cube, recognize pinches, or turn layers. M3 now derives a stable cube transform from the completed two-hand observations.
+
+### Safe learning exercise
+
+Open `features/tracking/tracking-utils.ts` and change the **1 hand detected** detail sentence to your own wording. Run the app, show one hand, confirm where the sentence appears, and then restore it. This changes presentation copy only; it cannot alter the camera, inference loop, or landmark math.
 
 ## Session entry template
 

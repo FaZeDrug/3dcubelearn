@@ -2,7 +2,7 @@
 
 **Status:** Active
 
-**Current milestone:** M2 — Two-hand tracking
+**Current milestone:** M3 — Cube in my hands
 
 **Last updated:** 2026-09-30
 
@@ -33,8 +33,8 @@ The project does not need to reach finish line 6 before finish lines 1–3 count
 |---|---|---|---|
 | M0 — Functional 3D lab | A local web app renders a recognizable, inspectable 3×3 cube in a utilitarian full-screen stage. | Foundation; no product FR completed | **Complete** |
 | M1 — Camera lifecycle | The user can start a mirrored webcam view, understand permission state, and stop the camera. | FR-01, FR-02, FR-04, FR-11 | **Complete** |
-| M2 — Two-hand tracking | The app displays reliable debug landmarks and zero/one/two-hand status. | FR-03, FR-04, part of FR-06 | **Active** |
-| M3 — Cube in my hands | A solved cube appears stably between two hands and safely handles tracking loss. | FR-05, FR-06 | Planned |
+| M2 — Two-hand tracking | The app displays reliable debug landmarks and zero/one/two-hand status. | FR-03, FR-04, part of FR-06 | **Complete** |
+| M3 — Cube in my hands | A solved cube appears stably between two hands and safely handles tracking loss. | FR-05, FR-06 | **Active** |
 | M4 — One deliberate turn | A taught pinch-and-drag turns one selected layer with preview, cancel, and 90° snap. | FR-07, FR-08, FR-09, FR-12, FR-13 | Planned |
 | M5 — Shareable interaction demo | Mirror/3D-hands switching, onboarding, accessibility, recovery states, and performance make the demo presentable. | FR-10, FR-11 and PRD non-functional requirements | Planned |
 | M6 — Local timed practice | Practice timing, solved-state completion, move events, and deterministic local playback work without accounts. | Foundations for FR-18, FR-19, FR-25, FR-26 | Planned |
@@ -176,7 +176,9 @@ After M1, the project owner should be able to explain:
 - Lint, type checking, all focused tests, and the production build passed.
 - `docs/BUILD_LOG.md` contains the detailed verification record and learning handoff.
 
-## 6. Active milestone: M2 — Two-hand tracking
+## 6. Completed milestone: M2 — Two-hand tracking
+
+**Completed:** 2026-09-30
 
 ### Goal
 
@@ -218,7 +220,83 @@ M2 does not include:
 - Authentication, persistence, timers, leaderboards, or replay
 - Marketing-page design
 
-## 7. Milestone operating loop
+### Completion evidence
+
+- The project owner tested the implementation with a real webcam on the baseline MacBook and confirmed that zero, one, and two hands were detected successfully and that the visual landmark experience worked correctly.
+- MediaPipe loads only after explicit camera activation and exposes application-owned observations for no more than two hands.
+- The overlay clears when no hands are detected, and the interface distinguishes initial zero hands from tracking loss.
+- Mirrored coordinate mapping and `object-fit: cover` cropping are covered by deterministic tests.
+- Stopping or unmounting cancels the frame loop, closes the MediaPipe task, clears the canvas, and preserves the M1 all-track camera cleanup.
+- Model-load and inference failures display recoverable states, including an in-place tracking retry.
+- Lint, type checking, all twenty focused tests, and the production build pass.
+- `docs/BUILD_LOG.md` contains the detailed verification record and learning handoff.
+
+### Learning checkpoint
+
+After M2, the project owner should be able to explain:
+
+- What a hand landmark is and why MediaPipe returns 21 landmarks per detected hand
+- Why MediaPipe output is converted into application-owned types
+- How mirrored video changes the x coordinate used to draw landmarks
+- Why frame-by-frame landmarks are drawn directly to canvas instead of stored in React state
+- How stopping the camera differs from cancelling the inference loop and closing the hand-tracking task
+- Why M2 reports perception only and does not place or turn the cube
+
+## 7. Active milestone: M3 — Cube in my hands
+
+### Goal
+
+Use the completed two-hand observations to render a solved virtual cube at a stable, readable transform between the user's hands. The cube should follow deliberate two-hand movement without distracting jitter and should fail safely when one or both hands are lost. This milestone proves presence and anchoring only; it does not interpret cube-turn gestures.
+
+### Deliverables
+
+- A pure hand-to-cube transform module that derives palm centers, midpoint, scale, and a constrained orientation from two tracked hands
+- Temporal smoothing and movement thresholds that reduce visible jitter while remaining responsive
+- A transparent React Three Fiber canvas composited over the mirrored camera preview
+- A solved cube rendered from the existing cube presentation at the tracked transform
+- Explicit waiting, anchored, one-hand, low-confidence, and tracking-lost behavior
+- Safe freeze, fade, or neutral recovery behavior when a valid two-hand anchor disappears
+- High-frequency cube transforms kept outside frame-by-frame React state
+- Focused tests for transform derivation, limits, smoothing, and loss recovery
+- Updated run, architecture, decision, and build-log documentation
+
+### Acceptance criteria
+
+M3 is complete only when:
+
+1. The completed M1 camera lifecycle and M2 hand tracking continue to pass.
+2. With fewer than two valid hands, no newly anchored cube appears and the interface explains what is missing.
+3. With two hands in the supported pose, a solved cube appears near the midpoint between them within one second of tracking readiness.
+4. Moving both hands together moves the cube in the same mirrored screen direction.
+5. Moving the hands apart or together changes cube scale within documented minimum and maximum limits.
+6. A mostly still two-hand pose does not produce distracting continuous cube jitter.
+7. Brief loss of one or both hands freezes or fades the cube without jumping to an unrelated pose; sustained loss returns to a safe waiting state.
+8. Stopping the camera or leaving the experience cancels tracking updates and releases camera, MediaPipe, animation-frame, and Three.js resources.
+9. Lint, type checking, tests, production build, and a real-browser two-hand anchoring smoke test pass and are recorded.
+
+### Explicit non-goals
+
+M3 does not include:
+
+- Pinch recognition, face selection, layer turns, or cube-state mutation
+- Whole-cube rotation gestures
+- Production-grade occlusion between the user's hands and cube
+- The 3D modeled-hands display mode
+- Authentication, persistence, timers, leaderboards, replay, or solving lessons
+- Marketing-page design
+
+### Learning checkpoint
+
+After M3, the project owner should be able to explain:
+
+- How normalized hand landmarks become a screen-space cube position and scale
+- Why the midpoint between palm centers is a useful first anchor
+- What temporal smoothing changes and why too much smoothing creates lag
+- Why transform calculations remain pure TypeScript while Three.js only presents the result
+- How the experience distinguishes a valid anchor from temporary or sustained tracking loss
+- Why cube placement and cube manipulation are separate milestones
+
+## 8. Milestone operating loop
 
 For each milestone:
 
@@ -232,7 +310,7 @@ For each milestone:
 8. Complete the learning handoff.
 9. Mark the milestone complete and activate exactly one next milestone.
 
-## 8. Parking lot
+## 9. Parking lot
 
 Ideas recorded here are intentionally not active work:
 

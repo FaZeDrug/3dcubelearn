@@ -8,7 +8,9 @@ Learn how to solve a Rubik's-style cube without owning one.
 
 M1 — Camera lifecycle is complete. The current local demo opens to the M0 3D cube, explains why camera access is useful, and waits for the user to select **Start camera**. If permission is granted, it shows a mirrored local preview with an active indicator and a real **Stop camera** action.
 
-The active milestone is M2 — Two-hand tracking. It will add browser-side hand landmarks and explicit zero-, one-, and two-hand states. Cube placement, gesture recognition, marketing polish, and backend features remain deferred to later milestones.
+M2 — Two-hand tracking is complete. MediaPipe loads in the browser, draws mirrored hand landmarks, and reports zero, one, or two detected hands. The project owner verified all three hand-count states with a real webcam on the baseline MacBook.
+
+The active milestone is M3 — Cube in my hands. It will derive a stable transform from both hands and composite the solved 3D cube between them. Gesture recognition, layer turns, marketing polish, and backend features remain deferred to later milestones.
 
 ## Requirements
 
@@ -35,7 +37,7 @@ Start the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Drag to orbit around the cube and scroll to zoom. Read the camera explanation, then select **Start camera** to test the mirrored preview. Select **Stop camera** when finished.
+Open [http://localhost:3000](http://localhost:3000). Drag to orbit around the cube and scroll to zoom. Read the camera explanation, then select **Start camera**. Wait for the hand model to load and raise zero, one, then two hands to verify the status and landmark overlay. Select **Stop camera** when finished.
 
 ## Verify the project
 
@@ -70,6 +72,17 @@ npm start
 - A `MediaStream` can drive a mirrored live preview without uploading or saving frames.
 - Camera failures can be translated into clear, actionable UI states.
 - Every stream track is stopped when the user stops the camera or leaves the experience.
+
+## What M2 proves
+
+- MediaPipe Hand Landmarker can be loaded only after the camera starts and can detect up to two hands locally in the browser.
+- MediaPipe results are converted into an application-owned landmark, handedness, and confidence shape.
+- A canvas overlay can map landmarks through the mirrored, `object-fit: cover` camera presentation.
+- The interface distinguishes model loading, zero hands, one hand, two hands, lost tracking, unsupported browsers, and inference errors.
+- The frame loop performs at most one synchronous inference at a time and avoids frame-by-frame React state updates.
+- Stopping the camera or unmounting the experience cancels animation work, clears landmarks, and closes the MediaPipe task.
+
+The JavaScript package is pinned to `@mediapipe/tasks-vision@1.0.1`. Its version-matched WebAssembly runtime and Google-hosted hand model are downloaded by the browser when tracking starts. Camera frames and raw landmarks remain on-device. MediaPipe's official privacy notice states that the API may send Google performance and utilization metrics; the application discloses that separately from camera-frame handling.
 
 ## Project documentation
 
