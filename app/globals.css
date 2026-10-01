@@ -105,7 +105,8 @@ canvas {
 }
 
 .camera-preview__video,
-.camera-preview__landmarks {
+.camera-preview__landmarks,
+.camera-preview__cube {
   display: block;
   width: 100%;
   height: 100%;
@@ -118,8 +119,20 @@ canvas {
 
 .camera-preview__landmarks {
   position: absolute;
+  z-index: 2;
   inset: 0;
   pointer-events: none;
+}
+
+.camera-preview__cube {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.camera-preview__cube canvas {
+  display: block;
 }
 
 .camera-active-indicator {
@@ -299,6 +312,36 @@ canvas {
 
 .camera-button--secondary:hover:not(:disabled) {
   background: rgb(255 255 255 / 13%);
+}
+
+.experience[data-camera-status="active"] .camera-panel {
+  width: min(20rem, calc(100% - 1.5rem));
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+}
+
+.experience[data-camera-status="active"] .camera-panel__eyebrow,
+.experience[data-camera-status="active"] .camera-panel__explanation,
+.experience[data-camera-status="active"] .camera-panel__privacy {
+  display: none;
+}
+
+.experience[data-camera-status="active"] .camera-panel h1 {
+  font-size: 1rem;
+}
+
+.experience[data-camera-status="active"] .camera-status {
+  margin-top: 0.625rem;
+  padding: 0.625rem;
+}
+
+.experience[data-camera-status="active"] .camera-panel__actions {
+  gap: 0.5rem;
+  margin-top: 0.625rem;
+}
+
+.experience[data-camera-status="active"] .camera-button {
+  padding: 0.625rem 0.75rem;
 }
 
 @media (max-width: 40rem) {

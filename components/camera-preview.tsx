@@ -2,14 +2,22 @@
 
 import { useEffect, type RefObject } from "react";
 
+import type { CubePlacementPhase } from "../features/cube-placement/cube-placement";
+import type { TrackingFrame } from "../features/tracking/tracking-types";
+import { CubeOverlay } from "./cube-overlay";
+
 type CameraPreviewProps = {
   canvasRef: RefObject<HTMLCanvasElement | null>;
+  latestFrameRef: RefObject<TrackingFrame | null>;
+  onPlacementPhaseChange: (phase: CubePlacementPhase) => void;
   stream: MediaStream;
   videoRef: RefObject<HTMLVideoElement | null>;
 };
 
 export function CameraPreview({
   canvasRef,
+  latestFrameRef,
+  onPlacementPhaseChange,
   stream,
   videoRef,
 }: CameraPreviewProps) {
@@ -44,6 +52,11 @@ export function CameraPreview({
           ref={canvasRef}
           aria-hidden="true"
           className="camera-preview__landmarks"
+        />
+        <CubeOverlay
+          latestFrameRef={latestFrameRef}
+          onPlacementPhaseChange={onPlacementPhaseChange}
+          videoRef={videoRef}
         />
       </div>
     </div>

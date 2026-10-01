@@ -1,7 +1,7 @@
 
 # 3D Cube Learn — Architecture
 
-**Status:** Current through completed M2; M3 boundaries remain proposed
+**Status:** Current through completed M3; M4 gesture and cube-engine boundaries remain proposed
 
 **Last updated:** 2026-09-30
 
@@ -11,7 +11,7 @@ Keep real-time interaction responsive and private in the browser while isolating
 
 The architecture should be understandable as a pipeline rather than a collection of framework features.
 
-The implemented path through M2 is intentionally small:
+The implemented path through M3 is intentionally small:
 
 ```mermaid
 flowchart LR
@@ -30,7 +30,11 @@ flowchart LR
     M --> N[MediaPipe adapter]
     N --> O[Application hand observations]
     O --> P[Imperative landmark canvas]
-    O --> Q[Zero / one / two-hand UI state]
+    O --> Q[Mutable latest-frame ref]
+    Q --> S[Pure cube placement math]
+    S --> T[Smoothed scene transform]
+    T --> U[Transparent Three.js overlay]
+    O --> V[Zero / one / two-hand UI state]
     G -->|stop or unmount| K[Stop every media track]
     M -->|stop or unmount| R[Cancel frame loop and close task]
 ```
@@ -86,7 +90,11 @@ Landmarks are drawn imperatively onto a canvas instead of being stored frame by 
 
 ### Stabilization
 
-The stabilizer will smooth noisy landmark positions, maintain handedness continuity, gate low-confidence frames, and emit explicit tracking-loss events.
+M3 introduces the first narrow stabilization boundary in `features/cube-placement/cube-placement.ts`. It averages wrist and four palm-base landmarks for each hand, maps both centers through the same mirror and `object-fit: cover` transform as the debug overlay, and derives a screen-space midpoint, scale, and constrained roll. Cube size is clamped to 16–44% of preview height.
+
+Small position, scale, and roll changes inside explicit dead zones are ignored. Larger changes use time-based exponential smoothing with separate half-lives so behavior is independent of render-frame rate. A valid transform is held for 350 ms after tracking loss and then hidden. Frames older than 250 ms are rejected by the rendering bridge so a stalled tracker cannot leave the cube permanently anchored.
+
+This is placement stabilization only. Handedness continuity, gesture hysteresis, and semantic tracking-loss events remain future gesture/attempt work.
 
 ### Gestures
 
@@ -98,7 +106,9 @@ The cube engine will be pure TypeScript. Given an initial state and a legal move
 
 ### Rendering bridge
 
-The scene will read cube state and smoothed transforms and display them. High-frequency positions should be stored in mutable refs or a purpose-built external store so React does not rerender the entire interface for every camera frame.
+`use-hand-tracking.ts` writes the latest application-owned observation into a mutable ref as well as maintaining its slower zero/one/two-hand UI state. `CubeOverlay` owns a second transparent React Three Fiber canvas stacked over the mirrored video. Its render loop reads the observation ref, calls the pure placement module, smooths the target, converts normalized preview coordinates into Three.js viewport units, and mutates the cube group directly.
+
+React state changes only when the human-visible placement phase changes between waiting, anchored, holding, and low-confidence. It does not carry frame-by-frame positions. The original `CubeStage` remains a separate inspectable scene while the camera is inactive.
 
 ## 4. Later full-stack boundary
 
@@ -112,7 +122,7 @@ Camera frames and raw landmarks do not cross the client/server boundary.
 
 ## 5. Current and planned project structure
 
-The repository currently contains only the boundaries required through M2:
+The repository currently contains only the boundaries required through completed M3:
 
 ```text
 app/
@@ -121,7 +131,8 @@ app/
   globals.css               # full-window stage, preview, status, and controls
 components/
   camera-experience.tsx     # camera UI states and stage/preview switching
-  camera-preview.tsx        # MediaStream video plus aligned landmark canvas
+  camera-preview.tsx        # video, aligned landmarks, and cube overlay stack
+  cube-overlay.tsx          # transparent R3F canvas and ref-driven scene bridge
   cube-stage.tsx            # client canvas, camera, lights, and orbit controls
   rubiks-cube.tsx           # cubie meshes and solved face colors
 features/
@@ -136,6 +147,9 @@ features/
     draw-hand-landmarks.ts  # imperative canvas overlay
     tracking-utils.ts       # mirror/cover math, hand counts, status copy
     *.test.ts               # adapter, coordinate, and status tests
+  cube-placement/
+    cube-placement.ts       # pure anchor, smoothing, limits, and loss behavior
+    cube-placement.test.ts  # deterministic placement and recovery tests
 lib/
   cube/
     cubie-positions.ts      # pure 3×3 coordinate generation
@@ -165,8 +179,10 @@ Only directories required by the active milestone should exist.
 - React owns menus, camera permission status, errors, active modes, the stream reference used to mount the preview, and other human-scale UI state.
 - The camera service owns browser permission requests, browser-error translation, and the rule that every media track must be stopped.
 - The tracking loop owns per-frame landmark observations and draws them directly to the overlay canvas.
+- The tracking loop exposes its latest application-owned observation through a mutable ref; React does not own each frame.
 - React owns only tracking lifecycle, failures, whether hands have been seen, and zero/one/two-hand count changes.
-- The stabilizer owns filtered transforms and confidence history.
+- The M3 placement module owns palm-center derivation, screen-space target transforms, limits, smoothing rules, and loss-phase rules.
+- The transparent Three.js overlay owns only the current visual group transform and visibility.
 - The cube engine owns the authoritative cube configuration.
 - Three.js owns only scene objects and transitional visual animation.
 - The attempt recorder owns the ordered semantic event stream.
@@ -180,6 +196,7 @@ Only directories required by the active milestone should exist.
 - Future pure cube and gesture logic: deterministic unit tests
 - React UI states: focused component tests
 - Current tracking adapter: deterministic MediaPipe-result fixtures, coordinate/status tests, and a project-owner real-webcam zero/one/two-hand smoke test
+- Current cube placement: deterministic transform, clamp, smoothing, and loss-phase tests plus a pending project-owner real-webcam anchoring smoke test
 - Primary user journeys: browser automation when stable
 - Visual alignment and interaction quality: explicit browser smoke tests on a baseline laptop
 - Server authorization and validation: integration tests and database-policy tests when backend work begins
@@ -187,7 +204,8 @@ Only directories required by the active milestone should exist.
 ## 8. Known architectural risks
 
 - A single webcam does not provide reliable absolute depth.
-- Hand crossing and occlusion may swap identity or confidence.
+- Hand crossing and occlusion may still destabilize the provisional palm-pair anchor.
+- M3 scale, smoothing, and loss thresholds passed real-hand calibration on the baseline MacBook; later gesture work may still expose poses that need measured adjustments.
 - React rerenders can compete with inference and rendering if per-frame data is modeled incorrectly.
 - Gesture ambiguity may require a more constrained interaction than the product vision initially imagines.
 - The replay avatar can look physically wrong even when cube state is correct.

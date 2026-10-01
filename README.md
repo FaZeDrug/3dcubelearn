@@ -10,7 +10,9 @@ M1 — Camera lifecycle is complete. The current local demo opens to the M0 3D c
 
 M2 — Two-hand tracking is complete. MediaPipe loads in the browser, draws mirrored hand landmarks, and reports zero, one, or two detected hands. The project owner verified all three hand-count states with a real webcam on the baseline MacBook.
 
-The active milestone is M3 — Cube in my hands. It will derive a stable transform from both hands and composite the solved 3D cube between them. Gesture recognition, layer turns, marketing polish, and backend features remain deferred to later milestones.
+M3 — Cube in my hands is complete. The project owner verified the real-hand placement, scale, stillness, and tracking-loss behavior on the baseline MacBook, and all automated gates pass.
+
+The active milestone is M4 — One deliberate turn. It will add a pure logical cube state plus one intentionally constrained pinch-and-drag interaction that can preview, cancel, or commit an exact 90-degree layer turn. Marketing polish and backend features remain deferred to later milestones.
 
 ## Requirements
 
@@ -37,7 +39,7 @@ Start the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Drag to orbit around the cube and scroll to zoom. Read the camera explanation, then select **Start camera**. Wait for the hand model to load and raise zero, one, then two hands to verify the status and landmark overlay. Select **Stop camera** when finished.
+Open [http://localhost:3000](http://localhost:3000). While the camera is off, drag to orbit around the lab cube and scroll to zoom. Read the camera explanation, then select **Start camera**. Wait for the hand model to load and raise two open hands with a clear gap between them. The tracked cube should appear between the palms, follow their shared movement, and scale as the gap changes. Select **Stop camera** when finished.
 
 ## Verify the project
 
@@ -83,6 +85,17 @@ npm start
 - Stopping the camera or unmounting the experience cancels animation work, clears landmarks, and closes the MediaPipe task.
 
 The JavaScript package is pinned to `@mediapipe/tasks-vision@1.0.1`. Its version-matched WebAssembly runtime and Google-hosted hand model are downloaded by the browser when tracking starts. Camera frames and raw landmarks remain on-device. MediaPipe's official privacy notice states that the API may send Google performance and utilization metrics; the application discloses that separately from camera-frame handling.
+
+## What M3 proves
+
+- Five palm landmarks per hand can produce a useful mirrored midpoint and hand-to-hand distance.
+- A transparent React Three Fiber canvas can place the existing solved cube over the contained camera preview.
+- Hand distance can drive cube size while staying between 16% and 44% of the preview height.
+- Dead zones plus time-based smoothing can reduce small landmark noise without making deliberate movement feel disconnected.
+- Per-frame hand observations and scene transforms can remain outside ordinary React state.
+- A brief tracking interruption can hold the last stable pose for 350 ms before the cube returns to a hidden waiting state.
+
+These behaviors are covered by pure tests and were verified by the project owner with a real webcam on the baseline MacBook.
 
 ## Project documentation
 

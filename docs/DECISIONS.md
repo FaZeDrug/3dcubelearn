@@ -137,3 +137,17 @@ Each record includes status, context, decision, rationale, consequences, and dat
 **Validation:** Lint, type checking, 20 tests, dependency inspection, and the production build pass. The project owner tested the experience with a real webcam on the baseline MacBook and confirmed successful zero-, one-, and two-hand detection with the landmark overlay.
 
 **Date:** 2026-09-30
+
+## D-011 — Derive and render the M3 cube transform outside React state
+
+**Status:** Accepted
+
+**Decision:** Derive each M3 cube target from the average of landmarks 0, 5, 9, 13, and 17 on each valid hand. Mirror and crop those palm centers with the same mapping used by the landmark canvas, use their midpoint for position, their screen-space distance for a cube size clamped to 16–44% of preview height, and a reduced hand-to-hand angle for constrained roll. Store the newest tracking frame in a mutable ref; have a transparent React Three Fiber overlay read, smooth, and apply the target directly in its render loop. Hold the last stable pose for 350 ms after loss, then hide it.
+
+**Rationale:** Palm-base landmarks are less sensitive to finger articulation than fingertips, and a two-center midpoint matches the first product hypothesis without pretending a monocular webcam provides physical depth. Keeping observations and transforms out of per-frame React state prevents the UI tree from rerendering at camera or display frequency. Pure screen-space math remains deterministic and testable without React, MediaPipe, WebGL, or a webcam.
+
+**Consequences:** The first cube is a visual overlay and may render over the user's hands; production occlusion is deferred. Position, size, smoothing, frame-age, confidence, and loss thresholds remain explicit calibration values that can be revisited when later gestures expose new poses. Gesture recognition and authoritative cube state remain separate later boundaries.
+
+**Validation:** Lint, type checking, 28 tests, and the production build pass. Pure tests cover mirrored midpoint placement, scale limits, constrained roll, jitter dead zones, responsive smoothing, brief hold, sustained loss, and low confidence. The project owner completed the real-webcam checklist on the baseline MacBook and reported that appearance, motion, scale, stability, loss recovery, reacquisition, and stop behavior looked correct.
+
+**Date:** 2026-09-30

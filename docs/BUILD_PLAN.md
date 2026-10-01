@@ -2,7 +2,7 @@
 
 **Status:** Active
 
-**Current milestone:** M3 — Cube in my hands
+**Current milestone:** M4 — One deliberate turn
 
 **Last updated:** 2026-09-30
 
@@ -34,8 +34,8 @@ The project does not need to reach finish line 6 before finish lines 1–3 count
 | M0 — Functional 3D lab | A local web app renders a recognizable, inspectable 3×3 cube in a utilitarian full-screen stage. | Foundation; no product FR completed | **Complete** |
 | M1 — Camera lifecycle | The user can start a mirrored webcam view, understand permission state, and stop the camera. | FR-01, FR-02, FR-04, FR-11 | **Complete** |
 | M2 — Two-hand tracking | The app displays reliable debug landmarks and zero/one/two-hand status. | FR-03, FR-04, part of FR-06 | **Complete** |
-| M3 — Cube in my hands | A solved cube appears stably between two hands and safely handles tracking loss. | FR-05, FR-06 | **Active** |
-| M4 — One deliberate turn | A taught pinch-and-drag turns one selected layer with preview, cancel, and 90° snap. | FR-07, FR-08, FR-09, FR-12, FR-13 | Planned |
+| M3 — Cube in my hands | A solved cube appears stably between two hands and safely handles tracking loss. | FR-05, FR-06 | **Complete** |
+| M4 — One deliberate turn | A taught pinch-and-drag turns one selected layer with preview, cancel, and 90° snap. | FR-07, FR-08, FR-09, FR-12, FR-13 | **Active** |
 | M5 — Shareable interaction demo | Mirror/3D-hands switching, onboarding, accessibility, recovery states, and performance make the demo presentable. | FR-10, FR-11 and PRD non-functional requirements | Planned |
 | M6 — Local timed practice | Practice timing, solved-state completion, move events, and deterministic local playback work without accounts. | Foundations for FR-18, FR-19, FR-25, FR-26 | Planned |
 | M7 — Ranked full stack | Accounts, server-issued attempts, validation, history, and leaderboards work securely. | FR-15 through FR-24 | Planned |
@@ -242,7 +242,9 @@ After M2, the project owner should be able to explain:
 - How stopping the camera differs from cancelling the inference loop and closing the hand-tracking task
 - Why M2 reports perception only and does not place or turn the cube
 
-## 7. Active milestone: M3 — Cube in my hands
+## 7. Completed milestone: M3 — Cube in my hands
+
+**Completed:** 2026-09-30
 
 ### Goal
 
@@ -296,7 +298,81 @@ After M3, the project owner should be able to explain:
 - How the experience distinguishes a valid anchor from temporary or sustained tracking loss
 - Why cube placement and cube manipulation are separate milestones
 
-## 8. Milestone operating loop
+### Completion evidence
+
+- The project owner completed the M3 real-webcam checklist on the baseline MacBook and reported that the cube placement looked good.
+- Zero and one hand produced the correct waiting guidance; two valid hands produced the solved cube between the palms.
+- Shared hand movement, hand-distance scaling, mostly still poses, brief tracking loss, sustained loss, reacquisition, and camera stop all behaved as expected during the owner's test.
+- The active-camera panel was compacted after half-screen testing showed the full explanation obscured the preview; the full privacy explanation remains visible before permission.
+- Lint, type checking, 28 focused tests, the production build, and whitespace validation pass.
+- M3 remains a real Three.js model with a fixed readable pitch/yaw and constrained roll; full hand-driven orientation and layer turns are intentionally deferred.
+
+## 8. Active milestone: M4 — One deliberate turn
+
+### Goal
+
+Turn the stable M3 placement into the smallest trustworthy manipulation loop. The user should learn one supported pinch-and-drag gesture, see which visible layer is being considered, preview its motion, and either cancel safely or commit exactly one legal 90-degree turn. The logical cube state—not the rendered mesh—must decide the result.
+
+### Deliverables
+
+- A pure, versionable 3×3 cube-state representation with legal quarter-turn transitions and solved-state checks
+- A move-history boundary that supports the first committed moves, undo, and reset without depending on Three.js
+- Stable thumb-index pinch measurements derived from application-owned landmarks
+- An explicit gesture state machine: `idle → candidate → engaged → direction locked → committed/cancelled → cooldown`
+- Screen-space face or layer selection with visible candidate feedback before commitment
+- A drag threshold and axis lock that prevent a single noisy frame from choosing a move
+- A visual layer-turn preview that never mutates authoritative cube state before commitment
+- Release behavior that snaps a committed turn to exactly 90 degrees or restores an incomplete turn
+- Safe cancellation when confidence drops or either required hand disappears
+- A deliberately distinct whole-cube orientation control or mode that cannot be mistaken for a layer turn
+- Utilitarian recenter, undo, reset, help, and keyboard/mouse debug controls
+- Focused tests for cube transitions, gesture hysteresis, commit/cancel behavior, tracking loss, undo, and reset
+- Updated run, architecture, decision, and build-log documentation
+
+### Acceptance criteria
+
+M4 is complete only when:
+
+1. The completed M1 camera, M2 tracking, and M3 anchoring journeys continue to pass.
+2. The interface teaches the supported pinch-and-drag sequence without requiring verbal explanation.
+3. Pinching near a supported visible face shows a clear candidate highlight without changing logical cube state.
+4. Small, noisy, or ambiguous motion does not lock a direction or commit a move.
+5. A deliberate drag locks one valid turn axis and previews only the selected layer.
+6. Releasing beyond the commit threshold snaps the layer to exactly 90 degrees and appends exactly one legal move to history.
+7. Releasing before the commit threshold returns the layer to its prior pose and does not change cube state or history.
+8. Losing a required hand or tracking confidence during an unfinished gesture cancels safely and never creates an unintended move.
+9. Undo reverses the last committed move, reset restores the solved state, and repeated supported turns never corrupt cube state.
+10. Whole-cube orientation is visually and mechanically distinct from a face turn and does not alter logical cube state.
+11. A keyboard or mouse debug path can reproduce the supported logical turn without camera input.
+12. Lint, type checking, unit tests, production build, and a real-browser gesture smoke test pass and are recorded.
+
+### Explicit non-goals
+
+M4 does not include:
+
+- Recognition of every natural physical-cube grip or turn style
+- Fast competition-speed gesture input or simultaneous moves
+- A polished onboarding animation, production visual design, sound, or haptics
+- Production-grade hand/cube occlusion or the 3D modeled-hands display mode
+- Timers, accounts, server validation, leaderboards, replays, or solving lessons
+- Mobile and tablet support
+
+### Learning checkpoint
+
+After M4, the project owner should be able to explain:
+
+- Why rendered cube meshes cannot be the authoritative cube state
+- How a pure quarter-turn changes cube state and why the server can later reuse the same rules
+- Why gesture recognition needs multiple temporal states, thresholds, hysteresis, and cooldown
+- The difference between candidate feedback, visual preview, logical commitment, and cancellation
+- Why tracking loss cancels an unfinished gesture instead of guessing the user's intent
+- How one semantic move can drive live rendering, move history, undo, future validation, and replay
+
+### Planned owner test
+
+The real-webcam test will check one clean commit, one deliberate cancellation, small-motion noise rejection, tracking-loss cancellation, repeated legal turns, undo, reset, whole-cube orientation separation, and the debug fallback. Exact hand pose and calibration instructions will be finalized from the implementation rather than guessed in advance.
+
+## 9. Milestone operating loop
 
 For each milestone:
 
@@ -310,7 +386,7 @@ For each milestone:
 8. Complete the learning handoff.
 9. Mark the milestone complete and activate exactly one next milestone.
 
-## 9. Parking lot
+## 10. Parking lot
 
 Ideas recorded here are intentionally not active work:
 

@@ -6,11 +6,11 @@ This is the shared status and learning record. It should describe what actually 
 
 **Date:** 2026-09-30
 
-**Active milestone:** M3 — Cube in my hands
+**Active milestone:** M4 — One deliberate turn
 
-**Application status:** M0, M1, and M2 complete; M3 not started
+**Application status:** M0, M1, M2, and M3 complete; M4 planned but not started
 
-**Current observable demo:** The root route displays the inspectable M0 cube and waits for an explicit camera start. Once active, it loads MediaPipe locally in the browser, draws mirrored landmark dots and connections over up to two hands, reports model loading and zero/one/two-hand states, and stops both tracking and camera resources on request or unmount.
+**Current observable demo:** The root route displays the inspectable M0 cube and waits for an explicit camera start. Once active, it loads MediaPipe locally in the browser, draws mirrored landmarks over up to two hands, and places the solved cube between two valid palm centers. The cube follows their midpoint, scales with their separation, smooths small noise, briefly holds its last stable pose on tracking loss, and then hides safely. Gesture recognition and layer turns do not exist yet.
 
 ## Completed
 
@@ -42,16 +42,17 @@ This is the shared status and learning record. It should describe what actually 
 - Kept per-frame landmarks out of React state; React updates only when tracking status or hand count changes.
 - Added deterministic tests for MediaPipe-result translation, hand-count states, mirror/crop coordinate mapping, and lost-tracking copy.
 - Passed the M2 automated gates and the project owner's physical-hand browser smoke test; every M2 acceptance criterion is complete.
+- Added a pure M3 placement module that derives palm centers, mirrored midpoint, constrained size, and limited roll from two application-owned hands.
+- Added dead zones and frame-rate-independent exponential smoothing for cube position, scale, and roll.
+- Exposed the newest tracking observation through a mutable ref without placing frame-by-frame landmarks in React state.
+- Added a transparent React Three Fiber canvas over the mirrored preview and reused the existing solved `RubiksCube` presentation.
+- Added waiting, anchored, holding, and low-confidence placement phases plus a 350-ms safe hold before sustained loss hides the cube.
+- Added deterministic M3 tests for transform derivation, scale limits, constrained orientation, smoothing, and tracking-loss recovery.
+- Passed every automated M3 gate and the project owner's complete real-webcam placement checklist; every M3 acceptance criterion is complete.
 
 ## Next action
 
-Begin M3 exactly as specified in `docs/BUILD_PLAN.md`:
-
-- Derive a pure, testable cube transform from two application-owned hand observations.
-- Composite the existing solved cube over the mirrored camera preview.
-- Anchor it near the palm midpoint and constrain scale from the distance between hands.
-- Add measured smoothing and safe freeze/fade behavior for tracking loss.
-- Do not add pinch recognition, layer turns, 3D modeled hands, or backend work.
+Begin M4 exactly as specified in `docs/BUILD_PLAN.md`: establish pure logical cube state first, then build the smallest explicit pinch-and-drag state machine and visual preview that can safely cancel or commit one exact 90-degree layer turn. Do not mix in timed mode, backend work, replay, 3D modeled hands, or marketing polish.
 
 ## Current run instructions
 
@@ -62,7 +63,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`. The camera remains off until **Start camera** is selected. Grant camera permission, wait for the MediaPipe model to load, and test zero, one, and two hands. Select **Stop camera** when finished.
+Open `http://localhost:3000`. The camera remains off until **Start camera** is selected. Grant camera permission, wait for the MediaPipe model to load, and raise two open hands with a visible gap. Test the tracked cube's midpoint, movement, scale, stillness, and loss recovery. Select **Stop camera** when finished.
 
 Run the validation gates with:
 
@@ -80,7 +81,7 @@ npm run build
 - `npm run dev` — passed; Next.js served the root route locally.
 - `npm run lint` — passed with no lint errors.
 - `npm run typecheck` — passed with no TypeScript errors.
-- `npm test` — passed: four test files and twenty tests.
+- `npm test` — passed: five test files and 28 tests.
 - `npm run build` — passed; `/` and `/_not-found` were statically generated.
 - Next.js still warns that it ignored `/Users/natasha/package-lock.json` because that separate home-directory lockfile is outside this repository. The repository's own lockfile remains present, and the production build completes successfully.
 - Chrome desktop smoke test — passed in an extension-free Incognito window:
@@ -118,10 +119,20 @@ npm run build
   - The production build statically generated `/` and `/_not-found` successfully.
   - No project-local Mint or other production assets were added; the version-pinned MediaPipe WASM runtime and model are deliberate runtime downloads.
 - M2 real-webcam smoke test — passed by the project owner on the baseline MacBook. The owner reported that the experience was responsive and successfully detected zero, one, and two hands with the landmark overlay. This supplies the physical-hand evidence required to close M2. Mobile QA remains outside the milestone.
+- M3 automated verification — passed:
+  - `npm run lint` — passed with no lint errors.
+  - `npm run typecheck` — passed with no TypeScript errors after correcting the overlay viewport type.
+  - `npm test` — passed: five test files and 28 tests.
+  - `npm run build` — passed; `/` and `/_not-found` were statically generated.
+  - `git diff --check` — passed with no whitespace errors.
+  - Browser, performance, and mobile QA were not run by the coding agent. The project owner performed the required real-hand test, and mobile remains outside M3.
+- M3 real-webcam smoke test — passed by the project owner on the baseline MacBook:
+  - The owner completed the provided zero-hand, one-hand, two-hand, midpoint movement, scale, stillness, brief-loss, sustained-loss, reacquisition, and stop checklist and reported that the cube looked good and the behaviors were fine.
+  - Half-screen testing exposed an oversized active panel rather than a placement defect. The active panel was compacted, while the full privacy explanation remains available before permission.
+  - The owner correctly observed that M3 uses a real 3D model but intentionally does not interpret wrist rotation, rotate the scene camera, or turn cube layers.
 
 ## Known risks and unknowns
 
-- Mapping webcam landmarks into a convincing cube pose has not been proven.
 - The exact gesture for distinguishing whole-cube rotation from a face turn is unresolved.
 - The final choice of hand visualization is unresolved.
 - Backend providers are proposed but not configured.
@@ -276,6 +287,41 @@ The loop currently runs MediaPipe synchronously on the main thread and has not r
 ### Safe learning exercise
 
 Open `features/tracking/tracking-utils.ts` and change the **1 hand detected** detail sentence to your own wording. Run the app, show one hand, confirm where the sentence appears, and then restore it. This changes presentation copy only; it cannot alter the camera, inference loop, or landmark math.
+
+## M3 learning handoff
+
+**Goal:** Place the existing solved cube stably between two tracked hands without adding gestures or cube moves.
+
+**Changed:** Added pure palm-pair placement math, a mutable latest-frame bridge, a transparent Three.js overlay, time-based smoothing, scale and roll limits, placement-state copy, and safe tracking-loss behavior.
+
+**Important files:**
+
+- `features/cube-placement/cube-placement.ts` — pure palm centers, screen transform, limits, smoothing, and loss phases.
+- `features/cube-placement/cube-placement.test.ts` — deterministic tests for M3 behavior without a camera or WebGL.
+- `features/tracking/use-hand-tracking.ts` — still owns inference, and now exposes only its latest frame through a mutable ref.
+- `components/cube-overlay.tsx` — reads that ref in the Three.js render loop and mutates the rendered cube group.
+- `components/camera-preview.tsx` — stacks video, debug landmarks, and the transparent cube canvas in one frame.
+- `components/camera-experience.tsx` — explains the M3 pose and reports waiting, anchored, holding, and low-confidence states.
+
+**Verification:** Lint, type checking, 28 tests, production build, and whitespace validation pass. The project owner completed the real-webcam checklist on the baseline MacBook and reported that placement, movement, scale, stillness, tracking loss, reacquisition, and stop behavior looked correct.
+
+**Decisions:** M3 uses five stable palm-base landmarks per hand, screen-space midpoint and distance, 16–44% preview-height scale limits, separate time-based smoothing constants, a 250-ms latest-frame age limit, and a 350-ms loss hold. The real-hand test accepted this first calibration.
+
+**Known limitations:** There are no gestures, layer turns, whole-cube rotations, occlusion masking, 3D modeled hands, backend features, or mobile support. The cube may render over the hands, and the provisional calibration may need a small measured adjustment after the physical test.
+
+**Main data flow:** MediaPipe writes an application-owned `TrackingFrame` to a mutable ref → the transparent Three.js overlay reads it in the render loop → pure placement math derives palm midpoint, scale, and constrained roll → time-based smoothing filters the target → the overlay mutates the real 3D cube group's position, rotation, scale, and visibility without frame-by-frame React state.
+
+**Safe learning exercise:** In `features/cube-placement/cube-placement.ts`, change `CUBE_SIZE_PER_HAND_DISTANCE` from `0.48` to `0.42`, observe how the cube responds to the same hand spacing, and restore `0.48`. This changes only the visual placement target and cannot mutate cube rules because M3 has no logical cube state.
+
+**Next action:** Begin M4 with the pure logical cube engine and tests before connecting any gesture to a rendered layer.
+
+### 2026-09-30 — M3 compact testing panel follow-up
+
+**Goal:** Keep the M3 status and stop control visible without covering a large part of the camera when the browser occupies only half the screen.
+
+**Changed:** The full explanation remains visible before camera permission. While the camera is active, the panel now uses a narrower, tighter layout and hides the already-read explanatory and privacy paragraphs. The title, live status, recovery action when needed, and **Stop camera** action remain visible.
+
+**Known limitation:** This is a utilitarian testing layout. Final responsive product UI and a deliberate collapse/expand control remain part of later presentation work.
 
 ## Session entry template
 

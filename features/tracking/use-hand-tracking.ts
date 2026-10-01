@@ -19,6 +19,7 @@ import {
 import type {
   HandCount,
   HandTracker,
+  TrackingFrame,
   TrackingStatus,
 } from "./tracking-types";
 import { getHandCount } from "./tracking-utils";
@@ -44,6 +45,7 @@ export function useHandTracking({
   const [status, setStatus] = useState<TrackingStatus>("idle");
   const lastHandCountRef = useRef<HandCount>(0);
   const hasSeenHandsRef = useRef(false);
+  const latestFrameRef = useRef<TrackingFrame | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,6 +54,7 @@ export function useHandTracking({
       clearHandLandmarks(canvas);
       lastHandCountRef.current = 0;
       hasSeenHandsRef.current = false;
+      latestFrameRef.current = null;
       return;
     }
 
@@ -71,6 +74,7 @@ export function useHandTracking({
       failed = true;
       clearHandLandmarks(canvasRef.current);
       lastHandCountRef.current = 0;
+      latestFrameRef.current = null;
       setHandCount(0);
 
       if (error instanceof HandTrackingUnsupportedError) {
@@ -120,6 +124,7 @@ export function useHandTracking({
       try {
         const frame = handTracker.detect(video, now);
         const nextHandCount = getHandCount(frame.hands.length);
+        latestFrameRef.current = frame;
         drawHandLandmarks(canvas, video, frame);
 
         if (nextHandCount > 0 && !hasSeenHandsRef.current) {
@@ -149,6 +154,7 @@ export function useHandTracking({
       setHasSeenHands(false);
       setMessage(null);
       setStatus("loading");
+      latestFrameRef.current = null;
       clearHandLandmarks(canvas);
 
       try {
@@ -179,6 +185,7 @@ export function useHandTracking({
       }
 
       stopTracker();
+      latestFrameRef.current = null;
       clearHandLandmarks(canvas);
     };
   }, [canvasRef, enabled, retryToken, videoRef]);
@@ -190,6 +197,7 @@ export function useHandTracking({
   return {
     handCount: enabled ? handCount : 0,
     hasSeenHands: enabled ? hasSeenHands : false,
+    latestFrameRef,
     message: enabled ? message : null,
     retryTracking,
     status: enabled ? status : "idle",

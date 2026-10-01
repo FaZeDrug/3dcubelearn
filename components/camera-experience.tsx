@@ -1,10 +1,18 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { useCamera, type CameraStatus } from "../features/camera/use-camera";
+import type { CubePlacementPhase } from "../features/cube-placement/cube-placement";
+import type {
+  HandCount,
+  TrackingStatus,
+} from "../features/tracking/tracking-types";
 import { useHandTracking } from "../features/tracking/use-hand-tracking";
-import { getTrackingPresentation } from "../features/tracking/tracking-utils";
+import {
+  getTrackingPresentation,
+  type TrackingPresentation,
+} from "../features/tracking/tracking-utils";
 import { CameraPreview } from "./camera-preview";
 import { CubeStage } from "./cube-stage";
 
@@ -38,6 +46,8 @@ const STATUS_COPY: Record<CameraStatus, { label: string; detail: string }> = {
 export function CameraExperience() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [placementPhase, setPlacementPhase] =
+    useState<CubePlacementPhase>("waiting");
   const { message, startCamera, status, stopCamera, stream } = useCamera();
   const isActive = status === "active" && stream !== null;
   const copy = STATUS_COPY[status];
@@ -51,6 +61,12 @@ export function CameraExperience() {
     tracking.handCount,
     tracking.hasSeenHands,
   );
+  const activeCopy = getM3Presentation(
+    trackingCopy,
+    tracking.status,
+    tracking.handCount,
+    placementPhase,
+  );
   const statusModifier = isActive ? tracking.status : status;
 
   return (
@@ -58,11 +74,14 @@ export function CameraExperience() {
       className="experience"
       data-camera-status={status}
       data-hand-count={tracking.handCount}
+      data-placement-phase={placementPhase}
       data-tracking-status={tracking.status}
     >
       {isActive ? (
         <CameraPreview
           canvasRef={canvasRef}
+          latestFrameRef={tracking.latestFrameRef}
+          onPlacementPhaseChange={setPlacementPhase}
           stream={stream}
           videoRef={videoRef}
         />
@@ -71,8 +90,8 @@ export function CameraExperience() {
       )}
 
       <header className="experience__header">
-        <strong>M2 · Two-hand tracking</strong>
-        <span>Raise one or two open hands inside the camera frame</span>
+        <strong>M3 · Cube in my hands</strong>
+        <span>Hold two open hands with space between your palms</span>
       </header>
 
       {isActive ? (
@@ -83,12 +102,12 @@ export function CameraExperience() {
       ) : null}
 
       <section className="camera-panel" aria-labelledby="camera-panel-title">
-        <p className="camera-panel__eyebrow">Hand tracking lab</p>
-        <h1 id="camera-panel-title">Show the app your hands</h1>
+        <p className="camera-panel__eyebrow">Two-hand placement lab</p>
+        <h1 id="camera-panel-title">Hold the virtual cube</h1>
         <p className="camera-panel__explanation">
-          Start the camera, then raise one or two open hands. The colored dots and
-          lines show exactly what the browser can detect before we attach the cube
-          in M3.
+          Start the camera, then raise two open hands with a clear gap between
+          them. A solved cube will use the midpoint and distance between your
+          palms to follow your movement.
         </p>
         <p className="camera-panel__privacy">
           Video and hand landmarks stay on this device. They are not uploaded,
@@ -103,10 +122,10 @@ export function CameraExperience() {
             aria-hidden="true"
           />
           <span>
-            <strong>{isActive ? trackingCopy.label : copy.label}</strong>
+            <strong>{isActive ? activeCopy.label : copy.label}</strong>
             <span>
               {isActive
-                ? tracking.message ?? trackingCopy.detail
+                ? tracking.message ?? activeCopy.detail
                 : message ?? copy.detail}
             </span>
           </span>
@@ -145,4 +164,42 @@ export function CameraExperience() {
       </section>
     </div>
   );
+}
+
+function getM3Presentation(
+  trackingCopy: TrackingPresentation,
+  trackingStatus: TrackingStatus,
+  handCount: HandCount,
+  placementPhase: CubePlacementPhase,
+): TrackingPresentation {
+  if (trackingStatus !== "ready" || handCount < 2) {
+    return trackingCopy;
+  }
+
+  if (placementPhase === "anchored") {
+    return {
+      label: "Cube anchored",
+      detail: "Move both hands together, then change the gap to test its scale.",
+    };
+  }
+
+  if (placementPhase === "holding") {
+    return {
+      label: "Holding the last stable pose",
+      detail:
+        "Tracking flickered, so the cube is briefly frozen instead of jumping.",
+    };
+  }
+
+  if (placementPhase === "low-confidence") {
+    return {
+      label: "Hold both hands steady",
+      detail: "Keep both palms open, separated, and fully inside the frame.",
+    };
+  }
+
+  return {
+    label: "Finding a stable two-hand hold",
+    detail: "Keep both palms visible with a clear gap between them.",
+  };
 }
