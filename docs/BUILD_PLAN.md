@@ -2,7 +2,7 @@
 
 **Status:** Active
 
-**Current milestone:** M1 — Camera lifecycle
+**Current milestone:** M2 — Two-hand tracking
 
 **Last updated:** 2026-09-30
 
@@ -32,8 +32,8 @@ The project does not need to reach finish line 6 before finish lines 1–3 count
 | Milestone | Observable outcome | PRD traceability | Status |
 |---|---|---|---|
 | M0 — Functional 3D lab | A local web app renders a recognizable, inspectable 3×3 cube in a utilitarian full-screen stage. | Foundation; no product FR completed | **Complete** |
-| M1 — Camera lifecycle | The user can start a mirrored webcam view, understand permission state, and stop the camera. | FR-01, FR-02, FR-04, FR-11 | **Next** |
-| M2 — Two-hand tracking | The app displays reliable debug landmarks and zero/one/two-hand status. | FR-03, FR-04, part of FR-06 | Planned |
+| M1 — Camera lifecycle | The user can start a mirrored webcam view, understand permission state, and stop the camera. | FR-01, FR-02, FR-04, FR-11 | **Complete** |
+| M2 — Two-hand tracking | The app displays reliable debug landmarks and zero/one/two-hand status. | FR-03, FR-04, part of FR-06 | **Active** |
 | M3 — Cube in my hands | A solved cube appears stably between two hands and safely handles tracking loss. | FR-05, FR-06 | Planned |
 | M4 — One deliberate turn | A taught pinch-and-drag turns one selected layer with preview, cancel, and 90° snap. | FR-07, FR-08, FR-09, FR-12, FR-13 | Planned |
 | M5 — Shareable interaction demo | Mirror/3D-hands switching, onboarding, accessibility, recovery states, and performance make the demo presentable. | FR-10, FR-11 and PRD non-functional requirements | Planned |
@@ -109,7 +109,9 @@ After M0, the project owner should be able to explain:
 - Lint, type checking, the focused unit test, and the production build passed.
 - `docs/BUILD_LOG.md` contains the detailed verification record and learning handoff.
 
-## 5. Active milestone: M1 — Camera lifecycle
+## 5. Completed milestone: M1 — Camera lifecycle
+
+**Completed:** 2026-09-30
 
 ### Goal
 
@@ -153,7 +155,70 @@ M1 does not include:
 - Authentication, persistence, timers, leaderboards, or replay
 - Marketing-page design
 
-## 6. Milestone operating loop
+### Learning checkpoint
+
+After M1, the project owner should be able to explain:
+
+- Why browser APIs and React hooks belong behind a client-component boundary
+- What a `MediaStream` and media track are
+- Why hiding a video element is different from stopping its tracks
+- How idle, requesting, active, denied, unavailable, and error states drive the interface
+- Why webcam frames stay local and are not stored in React state
+
+### Completion evidence
+
+- Loading the root route displayed the camera explanation and did not open a permission prompt.
+- Selecting **Start camera** opened Chrome's camera-only permission prompt.
+- Granting permission produced a playback-ready mirrored preview and a visible **Camera active** indicator. The initial unconstrained stream was 640×480; the camera-quality follow-up measured a negotiated 1920×1080 stream after adding ideal HD constraints.
+- Selecting **Stop camera** removed the preview, returned the app to idle, and cleared Chrome's recording indicator.
+- Navigating away while active unmounted the experience and also cleared Chrome's recording indicator.
+- Automated tests cover video-only constraints, stopping every track, and mapping denied, unavailable, device-busy, and unknown failures.
+- Lint, type checking, all focused tests, and the production build passed.
+- `docs/BUILD_LOG.md` contains the detailed verification record and learning handoff.
+
+## 6. Active milestone: M2 — Two-hand tracking
+
+### Goal
+
+Add browser-side hand detection on top of the completed camera lifecycle. The user should see debug landmarks aligned with the mirrored preview and an explicit zero-, one-, or two-hand status. This milestone proves perception only; it does not place or turn the cube.
+
+### Deliverables
+
+- A browser-side hand-tracking adapter with a documented model dependency
+- Loading, ready, unsupported, and inference-error states
+- A frame loop that runs only while both camera and tracking are active
+- Mirrored debug landmarks aligned with the live video
+- Explicit zero-, one-, and two-hand status
+- Tracking cleanup when the camera stops or the experience unmounts
+- Focused tests for application-owned landmark mapping and status logic
+- Updated run, architecture, decision, and build-log documentation
+
+### Acceptance criteria
+
+M2 is complete only when:
+
+1. The M1 camera lifecycle and privacy behavior continue to pass.
+2. Starting tracking loads the model in the browser without uploading video frames or landmarks.
+3. With no hand visible, the interface reports zero hands and draws no stale landmarks.
+4. With one open hand visible, the interface reports one hand and draws one aligned landmark set.
+5. With two open hands visible, the interface reports two hands and draws two aligned landmark sets.
+6. Landmarks remain directionally aligned with the mirrored video during ordinary hand movement on the baseline laptop.
+7. Stopping the camera or leaving the experience cancels inference work and releases tracking resources.
+8. Model-load and inference failures produce a recoverable message rather than a crashed experience.
+9. Lint, type checking, tests, production build, and a real-browser tracking smoke test pass and are recorded.
+
+### Explicit non-goals
+
+M2 does not include:
+
+- Cube placement between the hands
+- Gesture recognition, layer selection, or cube turns
+- Production-grade smoothing for occlusion and hand crossing
+- 3D modeled hands
+- Authentication, persistence, timers, leaderboards, or replay
+- Marketing-page design
+
+## 7. Milestone operating loop
 
 For each milestone:
 
@@ -167,7 +232,7 @@ For each milestone:
 8. Complete the learning handoff.
 9. Mark the milestone complete and activate exactly one next milestone.
 
-## 7. Parking lot
+## 8. Parking lot
 
 Ideas recorded here are intentionally not active work:
 

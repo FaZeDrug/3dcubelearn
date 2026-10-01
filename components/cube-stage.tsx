@@ -5,7 +5,11 @@ import { Canvas } from "@react-three/fiber";
 
 import { RubiksCube } from "./rubiks-cube";
 
-export function CubeStage() {
+type CubeStageProps = {
+  showHud?: boolean;
+};
+
+export function CubeStage({ showHud = true }: CubeStageProps) {
   return (
     <div className="stage">
       <Canvas
@@ -42,10 +46,12 @@ export function CubeStage() {
         />
       </Canvas>
 
-      <div className="stage__hud">
-        <strong>M0 · Functional 3D lab</strong>
-        <span>Drag to orbit · Scroll to zoom</span>
-      </div>
+      {showHud ? (
+        <div className="stage__hud">
+          <strong>M0 · Functional 3D lab</strong>
+          <span>Drag to orbit · Scroll to zoom</span>
+        </div>
+      ) : null}
     </div>
   );
 }

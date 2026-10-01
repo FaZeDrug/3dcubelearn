@@ -109,3 +109,17 @@ Each record includes status, context, decision, rationale, consequences, and dat
 **Consequences:** Rendering behavior still requires an explicit browser smoke test. As the cube engine grows, its legal moves and state transitions should remain testable through the same non-visual test boundary.
 
 **Date:** 2026-09-30
+
+## D-009 — Make camera capture explicit, local, and disposable
+
+**Status:** Accepted
+
+**Decision:** Request webcam access only after the user selects **Start camera**, request video with audio disabled, prefer a 1920×1080, 16:9, 30-fps user-facing stream through non-mandatory constraints, attach the resulting stream directly to a mirrored video element, and stop every track on user request, stale-request cleanup, or component unmount. Model the human-visible lifecycle as idle, requesting, active, denied, unavailable, and error states.
+
+**Rationale:** Browser permission is a user-controlled privacy boundary. A small camera service keeps browser-specific behavior testable, while a React hook makes the lifecycle visible without putting high-frequency video frames into React state.
+
+**Consequences:** The M0 cube remains visible while the camera is inactive and the live preview replaces it while active. Webcam frames remain local and are neither uploaded nor recorded. Future hand tracking must reuse this lifecycle rather than opening a second stream.
+
+**Validation:** M1 verified that permission is not requested on load, Chrome receives a camera-only request, a mirrored preview becomes playback-ready, both explicit stop and component unmount clear Chrome's recording indicator, and automated tests cover all-track cleanup and browser-error mapping. A quality follow-up replaced Chrome's 640×480 default with ideal HD constraints and measured a negotiated 1920×1080 stream on the baseline MacBook camera.
+
+**Date:** 2026-09-30

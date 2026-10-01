@@ -1,9 +1,9 @@
-import { CubeStage } from "../components/cube-stage";
+import { CameraExperience } from "../components/camera-experience";
 
 export default function HomePage() {
   return (
     <main>
-      <CubeStage />
+      <CameraExperience />
     </main>
   );
 }

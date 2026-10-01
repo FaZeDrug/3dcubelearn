@@ -6,9 +6,9 @@ Learn how to solve a Rubik's-style cube without owning one.
 
 ## Project status
 
-M0 — Functional 3D lab is complete. The current local demo opens directly to a full-window, inspectable 3×3 cube with mouse or trackpad orbit and zoom controls.
+M1 — Camera lifecycle is complete. The current local demo opens to the M0 3D cube, explains why camera access is useful, and waits for the user to select **Start camera**. If permission is granted, it shows a mirrored local preview with an active indicator and a real **Stop camera** action.
 
-The active milestone is M1 — Camera lifecycle. It will add an explicit camera start action, mirrored webcam preview, clear permission and error states, and a real stop-camera action. Hand tracking, gesture recognition, marketing polish, and backend features remain deferred to later milestones.
+The active milestone is M2 — Two-hand tracking. It will add browser-side hand landmarks and explicit zero-, one-, and two-hand states. Cube placement, gesture recognition, marketing polish, and backend features remain deferred to later milestones.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ Start the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Drag to orbit around the cube and scroll to zoom.
+Open [http://localhost:3000](http://localhost:3000). Drag to orbit around the cube and scroll to zoom. Read the camera explanation, then select **Start camera** to test the mirrored preview. Select **Stop camera** when finished.
 
 ## Verify the project
 
@@ -61,6 +61,15 @@ npm start
 - A recognizable solved cube can be generated from pure TypeScript position data.
 - Orbit and zoom controls work without adding product features prematurely.
 - Pure non-visual logic can be tested independently of the renderer.
+
+## What M1 proves
+
+- Camera permission is requested only after an explicit user action.
+- The browser receives a video-only request; microphone access is not requested.
+- The camera prefers a 1080p, 16:9, 30-fps stream and gracefully falls back to hardware-supported settings.
+- A `MediaStream` can drive a mirrored live preview without uploading or saving frames.
+- Camera failures can be translated into clear, actionable UI states.
+- Every stream track is stopped when the user stops the camera or leaves the experience.
 
 ## Project documentation
 

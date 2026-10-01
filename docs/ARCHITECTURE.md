@@ -1,7 +1,7 @@
 
 # 3D Cube Learn — Architecture
 
-**Status:** Current through M0; later milestone boundaries remain proposed
+**Status:** Current through M1; later milestone boundaries remain proposed
 
 **Last updated:** 2026-09-30
 
@@ -11,16 +11,21 @@ Keep real-time interaction responsive and private in the browser while isolating
 
 The architecture should be understandable as a pipeline rather than a collection of framework features.
 
-The implemented M0 path is intentionally small:
+The implemented path through M1 is intentionally small:
 
 ```mermaid
 flowchart LR
-    A[Next.js root route] --> B[CubeStage client component]
-    B --> C[React Three Fiber Canvas]
-    C --> D[Camera, lights, and OrbitControls]
-    C --> E[RubiksCube]
+    A[Next.js root route] --> B[CameraExperience client component]
+    B -->|camera inactive| C[CubeStage]
+    C --> D[React Three Fiber Canvas]
+    D --> E[RubiksCube]
     F[Pure cubie position generator] --> E
-    E --> G[27 Three.js cubie meshes]
+    B --> G[useCamera]
+    G --> H[Camera service]
+    H --> I[Browser mediaDevices API]
+    I -->|live MediaStream| G
+    B -->|camera active| J[Mirrored CameraPreview]
+    G -->|stop or unmount| K[Stop every media track]
 ```
 
 Everything after this rendering path is introduced only when its milestone becomes active.
@@ -56,11 +61,13 @@ flowchart LR
 
 ### Rendering
 
-M0 renders a cube without camera or tracking dependencies. `app/page.tsx` mounts `CubeStage`, which owns the React Three Fiber canvas, camera, lights, and orbit controls. `RubiksCube` owns the rendered cube composition. A pure TypeScript helper generates the 27 unique cubie positions and is tested without React or WebGL.
+M0 renders a cube without camera or tracking dependencies. `app/page.tsx` now mounts `CameraExperience`, which shows `CubeStage` whenever the camera is inactive. `CubeStage` owns the React Three Fiber canvas, camera, lights, and orbit controls. `RubiksCube` owns the rendered cube composition. A pure TypeScript helper generates the 27 unique cubie positions and is tested without React or WebGL.
 
 ### Camera
 
-The camera service will own permission requests, media-track lifecycle, mirrored display, and error recovery. Hiding the video is different from stopping its tracks.
+M1 implements camera work as three small boundaries. `camera-service.ts` requests video without audio, prefers a 1920×1080, 16:9, 30-fps user-facing stream without making those settings mandatory, stops every track, and converts browser errors into application failure states. `use-camera.ts` owns the idle/requesting/active/denied/unavailable/error state machine and guarantees cleanup on stop, a stale request, or unmount. `CameraPreview` attaches the resulting stream directly to a mirrored `<video>` element.
+
+The stream reference exists in React state only when it starts or stops so the preview can render. Video frames never enter React state, are never uploaded, and are never persisted. Hiding or removing the video element is not considered cleanup; the stream tracks must be stopped.
 
 ### Tracking
 
@@ -94,16 +101,23 @@ Camera frames and raw landmarks do not cross the client/server boundary.
 
 ## 5. Current and planned project structure
 
-The repository currently contains only the boundaries required through M0:
+The repository currently contains only the boundaries required through M1:
 
 ```text
 app/
   layout.tsx                # document shell and metadata
-  page.tsx                  # root route; mounts the current stage
-  globals.css               # full-window stage and minimal HUD styles
+  page.tsx                  # root route; mounts the camera experience
+  globals.css               # full-window stage, preview, status, and controls
 components/
+  camera-experience.tsx     # camera UI states and stage/preview switching
+  camera-preview.tsx        # MediaStream-to-video attachment and mirrored view
   cube-stage.tsx            # client canvas, camera, lights, and orbit controls
   rubiks-cube.tsx           # cubie meshes and solved face colors
+features/
+  camera/
+    camera-service.ts       # media request, cleanup, and browser-error mapping
+    camera-service.test.ts  # video-only, all-track cleanup, and failure tests
+    use-camera.ts           # React camera lifecycle state machine
 lib/
   cube/
     cubie-positions.ts      # pure 3×3 coordinate generation
@@ -115,10 +129,7 @@ Later boundaries remain a guide and should be created incrementally:
 ```text
 app/
   api/                      # later server endpoints
-components/
-  experience/              # durable UI around the stage
 features/
-  camera/                   # stream lifecycle
   tracking/                 # MediaPipe adapter and smoothing
   gestures/                 # intent state machine
   cube/                     # scene bridge and controls
@@ -133,7 +144,8 @@ Only directories required by the active milestone should exist.
 
 ## 6. State ownership rules
 
-- React owns menus, permission status, errors, active modes, and other human-scale UI state.
+- React owns menus, camera permission status, errors, active modes, the stream reference used to mount the preview, and other human-scale UI state.
+- The camera service owns browser permission requests, browser-error translation, and the rule that every media track must be stopped.
 - The tracking loop owns per-frame landmark observations.
 - The stabilizer owns filtered transforms and confidence history.
 - The cube engine owns the authoritative cube configuration.
@@ -145,6 +157,7 @@ Only directories required by the active milestone should exist.
 
 - Current cubie-position logic: deterministic Vitest unit test
 - Current 3D stage: production build plus a real-browser orbit, zoom, resize, and console smoke test
+- Current camera lifecycle: deterministic service tests plus a real-browser permission, live-preview, stop, and unmount smoke test
 - Future pure cube and gesture logic: deterministic unit tests
 - React UI states: focused component tests
 - Camera/tracking adapters: fixtures plus manual testing with a real webcam
